@@ -6,7 +6,7 @@ from typing import List, Dict, Optional
 import logging
 from urllib.parse import urlparse
 
-from com.lingenhag.rrp.domain.models import UrlHarvest, HarvestSummary  # Fixed import
+from com.lingenhag.rrp.domain.models import UrlHarvest, HarvestSummary
 from com.lingenhag.rrp.features.news.application.ports import (
     NewsSourcePort,
     NewsRepositoryPort,

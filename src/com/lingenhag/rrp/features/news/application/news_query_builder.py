@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Optional, Sequence
 
-from com.lingenhag.rrp.features.news.application.ports_asset_registry import AssetRegistryPort
+from .ports_asset_registry import AssetRegistryPort
 
 
 def _uniq_norm(values: Sequence[str]) -> List[str]:
@@ -95,6 +95,7 @@ class NewsQueryBuilder:
     # ---------------------------
     def build_query_spec(self, asset_symbol: str) -> "QuerySpec":
         """Erzeugt QuerySpec mit Registry-Daten."""
+        # FIX: absolute Imports auf Infrastruktur-Layer
         from com.lingenhag.rrp.features.news.infrastructure.search_query import QuerySpec
         aliases = self.registry.get_aliases(asset_symbol)
         negatives = self.registry.get_negative_terms(asset_symbol)
@@ -111,24 +112,24 @@ class NewsQueryBuilder:
         Form:
           (POSITIVE) [AND (CRYPTO_CTX)] [NOT (NEGATIVE)]
         """
-        spec = self.build_query_spec(asset_symbol)
         from com.lingenhag.rrp.features.news.infrastructure.search_query import build_boolean_core
+        spec = self.build_query_spec(asset_symbol)
         return build_boolean_core(spec)
 
     def build_for_gdelt(self, asset_symbol: str) -> str:
         """
         Liefert den Query-String für GDELT Doc API (Boolean-Logik kompatibel).
         """
-        spec = self.build_query_spec(asset_symbol)
         from com.lingenhag.rrp.features.news.infrastructure.search_query import build_gdelt_query
+        spec = self.build_query_spec(asset_symbol)
         return build_gdelt_query(spec)
 
     def build_for_rss(self, asset_symbol: str, start_iso_date: str, end_iso_date: str) -> str:
         """
         Liefert den Query-String für Google News RSS inkl. Datumsfilter.
         """
-        spec = self.build_query_spec(asset_symbol)
         from com.lingenhag.rrp.features.news.infrastructure.search_query import build_google_news_query
+        spec = self.build_query_spec(asset_symbol)
         return build_google_news_query(spec, start_iso_date=start_iso_date, end_iso_date=end_iso_date)
 
     # ---------------------------

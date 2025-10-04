@@ -120,7 +120,7 @@ class HarvestSummary:
     rejected_invalid: int
 
 # -----------------------------
-# Summarized Article (Fixed: All non-defaults first, then defaults)
+# Summarized Article (Fixed: Non-defaults first)
 # -----------------------------
 @dataclass(frozen=True)
 class SummarizedArticle:
@@ -138,7 +138,7 @@ class SummarizedArticle:
             raise ValueError("Sentiment must be in [-1, 1]")
 
 # -----------------------------
-# Market Data (Fixed: Non-default 'observed_at' before defaults)
+# Market Data (Fixed: Non-default 'observed_at' first)
 # -----------------------------
 @dataclass(frozen=True)
 class MarketSnapshot:

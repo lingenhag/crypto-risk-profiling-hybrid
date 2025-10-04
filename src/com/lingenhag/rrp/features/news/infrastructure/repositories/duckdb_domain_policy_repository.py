@@ -22,10 +22,10 @@ class DuckDBDomainPolicyRepository:
                             asset_symbol TEXT NOT NULL,
                             domain       TEXT NOT NULL,
                             allowed      BOOLEAN NOT NULL DEFAULT TRUE,
-                            created_at   TIMESTAMP NOT NULL DEFAULT NOW(),
-                            updated_at   TIMESTAMP NOT NULL DEFAULT NOW(),
+                            created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                            updated_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                             CONSTRAINT pk_news_domain_policy PRIMARY KEY (asset_symbol, domain)
-                        )
+                            )
                         """)
             con.execute("CREATE INDEX IF NOT EXISTS idx_news_domain_policy_asset   ON news_domain_policy(asset_symbol)")
             con.execute("CREATE INDEX IF NOT EXISTS idx_news_domain_policy_allowed ON news_domain_policy(allowed)")
@@ -41,7 +41,7 @@ class DuckDBDomainPolicyRepository:
                             llm_accepted     BIGINT NOT NULL DEFAULT 0,
                             llm_rejected     BIGINT NOT NULL DEFAULT 0,
                             CONSTRAINT pk_news_domain_stats PRIMARY KEY (asset_symbol, domain)
-                        )
+                            )
                         """)
             con.execute("CREATE INDEX IF NOT EXISTS idx_news_domain_stats_asset ON news_domain_stats(asset_symbol)")
             con.execute("CREATE INDEX IF NOT EXISTS idx_news_domain_stats_hv    ON news_domain_stats(harvested_total, stored_total)")
@@ -67,8 +67,8 @@ class DuckDBDomainPolicyRepository:
                 """
                 INSERT INTO news_domain_policy (asset_symbol, domain, allowed, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?)
-                ON CONFLICT (asset_symbol, domain) DO UPDATE
-                    SET allowed = excluded.allowed, updated_at = excluded.updated_at
+                    ON CONFLICT (asset_symbol, domain) DO UPDATE
+                                                              SET allowed = excluded.allowed, updated_at = excluded.updated_at
                 """,
                 (asset_symbol, domain, allowed, now, now),
             )
@@ -92,7 +92,7 @@ class DuckDBDomainPolicyRepository:
                 """
                 INSERT INTO news_domain_stats (asset_symbol, domain, harvested_total, stored_total, llm_accepted, llm_rejected)
                 VALUES (?, ?, 0, 0, 0, 0)
-                ON CONFLICT (asset_symbol, domain) DO NOTHING
+                    ON CONFLICT (asset_symbol, domain) DO NOTHING
                 """,
                 (asset_symbol, domain),
             )

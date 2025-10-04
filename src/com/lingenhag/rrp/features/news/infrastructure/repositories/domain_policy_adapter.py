@@ -2,9 +2,7 @@
 from __future__ import annotations
 
 from com.lingenhag.rrp.features.news.application.ports import DomainPolicyPort
-from com.lingenhag.rrp.features.news.infrastructure.repositories.duckdb_domain_policy_repository import (
-    DuckDBDomainPolicyRepository,
-)
+from .duckdb_domain_policy_repository import DuckDBDomainPolicyRepository
 
 
 class DomainPolicyAdapter(DomainPolicyPort):

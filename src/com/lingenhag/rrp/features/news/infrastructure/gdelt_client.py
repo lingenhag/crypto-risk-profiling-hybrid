@@ -79,7 +79,7 @@ class GdeltClient:
         self.max_retries = int(max_retries)
         self.metrics = metrics
         self.headers = {
-            "User-Agent": "com.lingenhag.rrp/1.0 (+https://example.local) python-requests"
+            "User-Agent": "ch.lingenhag.rrp/1.0 (+https://example.local) python-requests"
         }
         self.major_assets_without_context = {a.upper() for a in (major_assets_without_context or set())}
         self.enforce_context_assets = {a.upper() for a in (enforce_context_assets or set())}

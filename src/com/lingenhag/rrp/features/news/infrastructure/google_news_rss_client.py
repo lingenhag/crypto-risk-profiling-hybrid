@@ -13,7 +13,7 @@ import requests
 
 from com.lingenhag.rrp.platform.monitoring.metrics import Metrics
 from com.lingenhag.rrp.features.news.application.ports import HarvestCriteriaDTO
-from com.lingenhag.rrp.features.news.infrastructure.google_news_resolver import GoogleNewsResolver
+from .google_news_resolver import GoogleNewsResolver
 
 _LOG = logging.getLogger(__name__)
 
@@ -81,7 +81,7 @@ class GoogleNewsRssClient:
     def _default_http_fetch(self, url: str, timeout: int) -> str:
         r = requests.get(
             url,
-            headers={"User-Agent": "com.lingenhag.rrp/1.0 (+https://example.local) python-requests"},
+            headers={"User-Agent": "ch.lingenhag.rrp/1.0 (+https://example.local) python-requests"},
             timeout=timeout,
         )
         r.raise_for_status()

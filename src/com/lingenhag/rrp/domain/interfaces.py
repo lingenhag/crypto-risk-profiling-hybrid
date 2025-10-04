@@ -1,10 +1,18 @@
 # src/com/lingenhag/rrp/domain/interfaces.py
 from __future__ import annotations
-from typing import Protocol, runtime_checkable, Optional, List, Dict, Any
+
 from datetime import datetime
-from ch.bfh.pm.domain.models import (
-    MarketSnapshot, SentimentDecision, RelevanceDecision, Article, SearchCriteria,
-    POmegaScore, RiskFactor, CryptoAsset
+from typing import Any, Dict, List, Optional, Protocol, runtime_checkable
+
+from com.lingenhag.rrp.domain.models import (
+    Article,
+    CryptoAsset,
+    MarketSnapshot,
+    POmegaScore,
+    RelevanceDecision,
+    RiskFactor,
+    SearchCriteria,
+    SentimentDecision,
 )
 
 
@@ -46,12 +54,8 @@ class UrlResolver(Protocol):
 class MarketDataSource(Protocol):
     """Fetches market data snapshots from external providers."""
 
-    def fetch_spot(
-            self, *, provider_ids: List[str], vs_currency: str = "usd"
-    ) -> List[MarketSnapshot]:
-        """
-        Fetches current spot market data for given provider IDs.
-        """
+    def fetch_spot(self, *, provider_ids: List[str], vs_currency: str = "usd") -> List[MarketSnapshot]:
+        """Fetches current spot market data for given provider IDs."""
 
     def fetch_history_range(
             self,
@@ -62,9 +66,7 @@ class MarketDataSource(Protocol):
             ts_to: int,
             granularity: str = "hourly",
     ) -> List[MarketSnapshot]:
-        """
-        Fetches historical market data as snapshots in the given range.
-        """
+        """Fetches historical market data as snapshots in the given range."""
 
 
 @runtime_checkable
@@ -72,43 +74,33 @@ class NewsAggregatorPort(Protocol):
     """Aggregates news articles based on search criteria."""
 
     def fetch_articles(self, criteria: SearchCriteria) -> List[Article]:
-        """
-        Fetches relevant articles for an asset in the time range.
-        Supports languages and limits.
-        """
+        """Fetches relevant articles for an asset in the time range. Supports languages and limits."""
+        ...
 
 
 @runtime_checkable
 class LLMAdapterPort(Protocol):
     """Adapts LLM for relevance and sentiment analysis (ensemble support)."""
 
-    def process_articles(
-            self, articles: List[Article], dry_run: bool = False
-    ) -> List[RelevanceDecision]:
-        """
-        Processes articles for relevance; extends to sentiment if relevant.
-        Dry-run skips API calls.
-        """
+    def process_articles(self, articles: List[Article], dry_run: bool = False) -> List[RelevanceDecision]:
+        """Processes articles for relevance; extends to sentiment if relevant. Dry-run skips API calls."""
+        ...
 
-    def analyze_sentiment_batch(
-            self, texts: List[str], model: str = "gpt-4o"
-    ) -> List[SentimentDecision]:
-        """
-        Batch-analyzes sentiment with rate-limit handling.
-        """
+    def analyze_sentiment_batch(self, texts: List[str], model: str = "gpt-4o") -> List[SentimentDecision]:
+        """Batch-analyzes sentiment with rate-limit handling."""
+        ...
 
 
 @runtime_checkable
 class RiskCalculatorPort(Protocol):
     """Calculates risk factors from market data."""
 
-    def calculate_factors(
-            self, asset: CryptoAsset, snapshots: List[MarketSnapshot]
-    ) -> List[RiskFactor]:
+    def calculate_factors(self, asset: CryptoAsset, snapshots: List[MarketSnapshot]) -> List[RiskFactor]:
         """
         Computes standardized risk metrics (Sharpe, Sortino, VaR, etc.).
         Applies z-score normalization and winsorizing.
         """
+        ...
 
 
 @runtime_checkable
@@ -119,12 +111,13 @@ class POmegaIntegratorPort(Protocol):
             self,
             quant_factors: List[RiskFactor],
             sentiment_score: float,
-            omega: float
+            omega: float,
     ) -> POmegaScore:
         """
         Computes P_ω = (1-ω) * quant_score + ω * sentiment_norm.
         Includes sensitivity analysis.
         """
+        ...
 
 
 @runtime_checkable
@@ -135,11 +128,9 @@ class PersistencePort(Protocol):
         ...
 
     def save_pomega_score(self, score: POmegaScore, observed_at: datetime) -> None:
-        """
-        Saves profile with audit trail (votes, rejections, summaries).
-        """
+        """Saves profile with audit trail (votes, rejections, summaries)."""
+        ...
 
     def query_audit_trail(self, asset: CryptoAsset) -> Dict[str, Any]:
-        """
-        Retrieves audit data for transparency (CSV-export ready).
-        """
+        """Retrieves audit data for transparency (CSV-export ready)."""
+        ...

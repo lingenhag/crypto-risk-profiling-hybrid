@@ -1,4 +1,4 @@
-com.lingenhag.rrpfeatures/news/presentation/cli_commands.py
+# src/com/lingenhag/rrp/features/news/presentation/cli_commands.py
 from __future__ import annotations
 
 import argparse
@@ -9,22 +9,24 @@ import duckdb
 import logging
 from pathlib import Path
 
-from ccom.lingenhag.rrp.platform.config.settings import Settings
-from ccom.lingenhag.rrp.features.news.application.factories import NewsSourceFactory
-from ccom.lingenhag.rrp.features.news.application.usecases.harvest_urls import HarvestUrls
-from ccom.lingenhag.rrp.features.news.application.ports import HarvestCriteriaDTO
-from ccom.lingenhag.rrp.features.news.infrastructure.repositories.duckdb_news_repository import DuckDBNewsRepository
-from ccom.lingenhag.rrp.features.news.infrastructure.repositories.duckdb_domain_policy_repository import DuckDBDomainPolicyRepository
-from ccom.lingenhag.rrp.features.news.infrastructure.repositories.domain_policy_adapter import DomainPolicyAdapter
-from ccom.lingenhag.rrp.features.news.infrastructure.repositories.duckdb_asset_registry import DuckDBAssetRegistryRepository
-from ccom.lingenhag.rrp.features.news.application.news_query_builder import NewsQueryBuilder
-from ccom.lingenhag.rrp.platform.monitoring.metrics import Metrics
-from ccom.lingenhag.rrp.platform.persistence.migrator import apply_migrations
+from com.lingenhag.rrp.platform.config.settings import Settings
+from com.lingenhag.rrp.features.news.application.factories import NewsSourceFactory
+from com.lingenhag.rrp.features.news.application.usecases.harvest_urls import HarvestUrls
+from com.lingenhag.rrp.features.news.application.ports import HarvestCriteriaDTO
+from com.lingenhag.rrp.features.news.infrastructure.repositories.duckdb_news_repository import DuckDBNewsRepository
+from com.lingenhag.rrp.features.news.infrastructure.repositories.duckdb_domain_policy_repository import DuckDBDomainPolicyRepository
+from com.lingenhag.rrp.features.news.infrastructure.repositories.domain_policy_adapter import DomainPolicyAdapter
+from com.lingenhag.rrp.platform.monitoring.metrics import Metrics
+from com.lingenhag.rrp.platform.persistence.migrator import apply_migrations
 
 _LOG = logging.getLogger(__name__)
 
 
 def add_news_subparser(root_subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    """
+    CLI-Integration für den News-Slice.
+    Subcommand: `harvest` (URLs einsammeln → url_harvests, Domain-Policy berücksichtigen)
+    """
     news_parser = root_subparsers.add_parser("news", help="News-Slice (Harvest, Inbox, Audit)")
     news_sub = news_parser.add_subparsers(dest="news_cmd", required=True)
 
@@ -38,18 +40,23 @@ def add_news_subparser(root_subparsers: argparse._SubParsersAction[argparse.Argu
     p_harvest.add_argument("--limit", type=int, default=100, help="Max. URLs nach Dedupe")
     p_harvest.add_argument(
         "--db",
-        help="Pfad zu DuckDB (Default aus config.yaml: database.default_path oder 'data/pm.duckdb')",
+        help="Pfad zu DuckDB (Default aus config.yaml: database.default_path oder 'data/rrp.duckdb')",
     )
     p_harvest.add_argument("--rss-workers", type=int, default=4, help="Threads für RSS-Auflösung")
     p_harvest.add_argument(
         "--auto-migrate",
         action="store_true",
-        help="Falls Schema fehlt: Migrationen automatisch anwenden (persistence/migrations)",
+        help="Falls Schema fehlt: Migrationen automatisch anwenden (platform/persistence/migrations)",
     )
     p_harvest.add_argument(
-        "--dry-run",
+        "--verbose",
         action="store_true",
-        help="Simuliere Harvest ohne Persistenz (für Tests)",
+        help="Detail-Logging/Progress-Ausgabe aktivieren",
+    )
+    p_harvest.add_argument(
+        "--enforce-domain-filter",
+        action="store_true",
+        help="Domain-Filter erzwingen (überschreibt config news_domain_filter.enforce)",
     )
     p_harvest.set_defaults(func=_cmd_news_harvest)
 
@@ -78,6 +85,10 @@ def _build_time_range(days: int, date_from: Optional[str], date_to: Optional[str
 
 
 def _ensure_schema(db_path: str, auto_migrate: bool) -> None:
+    """
+    Minimal-Check: Wenn `assets` fehlt, laufen die News-Migrationen (001..005) einmalig durch.
+    Hinweis: Market-Migrationen (003, 006, 007) sind für Harvest nicht notwendig.
+    """
     if not auto_migrate:
         _LOG.info("Skipping schema check as --auto-migrate is not set")
         return
@@ -85,12 +96,12 @@ def _ensure_schema(db_path: str, auto_migrate: bool) -> None:
         repo = DuckDBNewsRepository(db_path=db_path)
         with repo._connect() as con:
             tables = con.execute("SHOW TABLES").fetchall()
-            table_names = [row[0] for row in tables]
+            table_names = {row[0] for row in tables}
             if "assets" not in table_names:
-                migrations_path = Path("src/ch/bfh/pm/platform/persistence/migrations")
+                migrations_path = Path("src/com/lingenhag/rrp/platform/persistence/migrations")
                 applied = apply_migrations(db_path, str(migrations_path))
                 if applied:
-                    _LOG.info(f"[migrate] Applied: {', '.join(applied)}")
+                    _LOG.info("[migrate] Applied: %s", ", ".join(applied))
                 else:
                     raise RuntimeError("Schema initialization failed")
             else:
@@ -98,16 +109,24 @@ def _ensure_schema(db_path: str, auto_migrate: bool) -> None:
     except duckdb.IOException as e:
         raise SystemExit(f"Database error: {e}") from e
     except Exception as e:
-        _LOG.warning(f"Schema check failed ({e}), trying migrations")
-        migrations_path = Path("src/ch/bfh/pm/platform/persistence/migrations")
+        # Falls der erste Check fehlschlägt, versuche es proaktiv mit den Migrationen.
+        _LOG.warning("Schema check failed (%s), trying migrations", e)
+        migrations_path = Path("src/com/lingenhag/rrp/platform/persistence/migrations")
         applied = apply_migrations(db_path, str(migrations_path))
         if applied:
-            _LOG.info(f"[migrate] Applied: {', '.join(applied)}")
+            _LOG.info("[migrate] Applied: %s", ", ".join(applied))
         else:
             raise SystemExit("Schema initialization failed")
 
 
 def _cmd_news_harvest(args: argparse.Namespace, *, config: Settings, metrics: Metrics) -> None:
+    """
+    Führt einen Harvest-Lauf aus:
+      - optional: Schema auto-migrieren
+      - Quellen instanziieren (gemäß config + CLI)
+      - Domain-Filter (Allow-/Blocklist) berücksichtigen
+      - Ergebnisse in url_harvests persistieren, Rejections protokollieren
+    """
     _ensure_schema(args.db, args.auto_migrate)
 
     asset = args.asset.upper()
@@ -117,10 +136,10 @@ def _cmd_news_harvest(args: argparse.Namespace, *, config: Settings, metrics: Me
     repo = DuckDBNewsRepository(db_path=args.db)
     domain_repo = DuckDBDomainPolicyRepository(db_path=args.db)
     domain_policy = DomainPolicyAdapter(domain_repo)
-    registry = DuckDBAssetRegistryRepository(db_path=args.db)
-    query_builder = NewsQueryBuilder(asset_registry=registry)  # Dynamische Aliases/Negatives
 
-    enforce = bool(config.get("news_domain_filter", "enforce", False))
+    # Config-Default lesen; via CLI-Flag kann man es erzwingen
+    enforce_cfg = bool(config.get("news_domain_filter", "enforce", False))
+    enforce = bool(getattr(args, "enforce_domain_filter", False) or enforce_cfg)
 
     sources = NewsSourceFactory(config, metrics).create_sources(args.source, args.rss_workers)
     svc = HarvestUrls(
@@ -131,15 +150,8 @@ def _cmd_news_harvest(args: argparse.Namespace, *, config: Settings, metrics: Me
         enforce_domain_filter=enforce,
     )
 
-    # Dry-Run: Skip Persist, log Queries
-    if args.dry_run:
-        _LOG.info(f"[dry-run] Query for {asset}: {query_builder.build_core_boolean(asset)}")
-        _LOG.info("[dry-run] Skipping persist – simulate summary")
-        print("[news/harvest] dry-run: total=0 assembled=0 deduped=0 saved=0 duplicates=0 rejected=0")
-        return
-
     start_time = time.time()
-    summary = svc.run(criteria=criteria, verbose=True, progress_every=25)
+    summary = svc.run(criteria=criteria, verbose=bool(getattr(args, "verbose", False)), progress_every=25)
     metrics.track_harvest_duration(asset, time.time() - start_time)
     print(
         f"[news/harvest] asset={asset} "
