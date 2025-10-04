@@ -1,32 +1,25 @@
+# pyproject.toml
 [build-system]
-requires = ["setuptools>=61"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
-name = "com.lingenhag.rrp"
+name = "rrp-profile"
 version = "0.1.0"
-requires-python = ">=3.10"
+description = "Return-Risk Profiling of Cryptocurrencies with Quant + GenAI"
 dependencies = [
-    "requests",
-    "beautifulsoup4",
-    "vaderSentiment",
-    "flask"
+    "duckdb>=1.0.0",
+    "requests>=2.31.0",
+    "pytest>=7.4.0",
+    "pytest-mock>=3.11.1",
+    "openai>=1.0.0",  # Für LLM
+    "google-generativeai>=0.3.0",  # Gemini
+    "playwright>=1.40.0",  # Resolver
 ]
 
-[tool.setuptools.packages.find]
-where = ["src"]
-
-[tool.black]
-line-length = 100
-target-version = ["py313"]
-
-[tool.ruff]
-line-length = 100
-target-version = "py313"
-
-[tool.ruff.lint]
-select = ["E","F","I","UP","B"]
-
 [tool.pytest.ini_options]
-addopts = "-q"
 testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "--cov=src/com/lingenhag/rrp --cov-report=html"
